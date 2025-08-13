@@ -41,9 +41,14 @@ class RoleController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Role $role)
+    public function show( $id)
     {
-        return $role;
+        $role = Role::find($id);
+
+        if (!$role) {
+        return response()->json(['message' => 'role n existe pas'], 404);
+    }
+        return response()->json($role);
     }
 
     /**
