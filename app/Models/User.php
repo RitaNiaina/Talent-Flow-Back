@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
@@ -29,6 +31,22 @@ class User extends Authenticatable
         'mot_passe',
         'remember_token',
     ];
+    // Hash automatique du mot de passe
+    public function setMotPasseAttribute($value)
+    {
+        $this->attributes['mot_passe'] = Hash::make($value);
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+    
+    // Relation : un recruteur peut avoir plusieurs offres
+    public function offres()
+    {
+        return $this->hasMany(Offre::class, 'recruteur_id');
+    }
 
     /**
      * Get the attributes that should be cast.
