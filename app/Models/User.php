@@ -19,7 +19,13 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'nom_utilisateur','email_utilisateur','mot_passe','role_id'
+        'nom_utilisateur',
+        'email_utilisateur',
+        'mot_passe',
+        'role_id',
+        'cv_candidat',
+        'lettre_motivation',
+        'date_inscription',
     ];
 
     /**
@@ -48,6 +54,17 @@ class User extends Authenticatable
         return $this->hasMany(Offre::class, 'recruteur_id');
     }
 
+    public function candidatures()
+    {
+    return $this->hasMany(Candidature::class, 'candidat_id');
+    }
+
+    public function candidaturesManager()
+    {
+    return $this->hasMany(Candidature::class, 'manager_id');
+    }
+
+
     /**
      * Get the attributes that should be cast.
      *
@@ -57,7 +74,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'date_inscription' => 'date',
         ];
     }
 }

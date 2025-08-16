@@ -14,5 +14,10 @@ class Offre extends Model
         // Relation vers le modèle User
         return $this->belongsTo(User::class, 'recruteur_id');
     }
+    public function candidatures()
+    {
+    return $this->hasMany(Candidature::class, 'offre_id');
+    }
+
 
 }

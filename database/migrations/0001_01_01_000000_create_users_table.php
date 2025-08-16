@@ -19,6 +19,10 @@ return new class extends Migration
             $table->string('mot_passe');
             $table->rememberToken();
             $table->timestamps();
+            // Champs spécifiques aux candidats
+            $table->string('cv_candidat')->nullable(); // chemin du CV
+            $table->text('lettre_motivation')->nullable(); // texte de la lettre de motivation
+            $table->date('date_inscription')->nullable(); // date d’inscription du candidat
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

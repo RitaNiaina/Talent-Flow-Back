@@ -42,7 +42,7 @@ class OffreController extends Controller
     // 3. Créer l'offre si tout est bon
     $offre = Offre::create($validator->validated());
 
-    return response()->json($role, 201);
+    return response()->json($offre, 201);
 
     // Vérifier que le recruteur_id correspond bien à un utilisateur avec le rôle "recruteur"
     $utilisateur = User::find($request->recruteur_id);
@@ -96,7 +96,7 @@ class OffreController extends Controller
         // Mise à jour
         $offre->update($validator->validated());
     
-        return response()->json(['message' => 'Offre mis à jour avec succès', 'role' => $offre]);
+        return response()->json(['message' => 'Offre mis à jour avec succès', 'offre' => $offre]);
     }
 
     /**
