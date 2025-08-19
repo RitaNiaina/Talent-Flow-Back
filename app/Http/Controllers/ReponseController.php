@@ -38,7 +38,8 @@ class ReponseController extends Controller
        }
 
        // 3. Créer l'offre si tout est bon
-       $reponse = Test::create($validator->validated());
+       $reponse = Reponse::create($validator->validated());
+
 
        return response()->json($reponse, 201);
     }

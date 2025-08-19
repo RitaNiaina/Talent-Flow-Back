@@ -25,7 +25,7 @@ class TestController extends Controller
        $validator = Validator::make($request->all(), [
             
         'nom_test' => 'required|string|max:255',
-        'duree_test' => 'required|time',
+        'duree_test' => 'required|date_format:H:i:s',
         'description_test' => 'required|string',
         'offre_id' => 'required|exists:offres,id',
        ]);
@@ -70,7 +70,7 @@ class TestController extends Controller
         // Validation
         $validator = Validator::make($request->all(), [
             'nom_test' => 'required|string|max:255',
-            'duree_test' => 'required|time',
+            'duree_test' => 'required|date_format:H:i:s',
             'description_test' => 'required|string',
         ]);
     
