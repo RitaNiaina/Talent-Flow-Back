@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+
 class UtilisateurController extends Controller
 {
     /**
@@ -22,31 +24,30 @@ class UtilisateurController extends Controller
     public function store(Request $request)
     {
         // 1. Valider les données
-       $validator = Validator::make($request->all(), [
-
-            'nom_utilisateur'=> 'required|string|max:255',
-            'email_utilisateur'=> 'required|email|unique:users,email_utilisateur',
-            'mot_passe'=> 'required|string|min:6',
-            'role_id'=> 'required|exists:roles,id',
+        $validator = Validator::make($request->all(), [
+            'nom_utilisateur' => 'required|string|max:255',
+            'email_utilisateur' => 'required|email|unique:users,email_utilisateur',
+            'mot_passe' => 'required|string|min:6',
+            'role_id' => 'required|exists:roles,id',
             // Ajout des champs spécifiques au candidat (optionnels)
-            'cv_candidat' => 'nullable|string|max:255',  
-            'lettre_motivation' => 'nullable|string|max:255',  
-            'date_inscription' => 'nullable|date',  
-    ]);
+            'cv_candidat' => 'nullable|string|max:255',
+            'lettre_motivation' => 'nullable|string|max:255',
+            'date_inscription' => 'nullable|date',
+        ]);
 
-    // 2. Si la validation échoue, renvoyer les erreurs
-    if ($validator->fails()) {
-        return response()->json([
-            'errors' => $validator->errors()
-        ], 422);
-    }
+        // 2. Si la validation échoue, renvoyer les erreurs
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
-    // 3. Créer l'utilisateur si tout est bon
-    $validated = $validator->validated();
-    $validated['mot_passe'] = bcrypt($validated['mot_passe']);
-    $utilisateur = User::create($validated);
+        // 3. Créer l'utilisateur si tout est bon
+        $validated = $validator->validated();
+        $validated['mot_passe'] = bcrypt($validated['mot_passe']);
+        $utilisateur = User::create($validated);
 
-    return response()->json($utilisateur, 201);
+        return response()->json($utilisateur, 201);
     }
 
     /**
@@ -57,9 +58,9 @@ class UtilisateurController extends Controller
         $utilisateur = User::find($id);
 
         if (!$utilisateur) {
-        return response()->json(['message' => 'utilisateur n existe pas'], 404);
-    }
-    return response()->json($utilisateur);
+            return response()->json(['message' => 'utilisateur n existe pas'], 404);
+        }
+        return response()->json($utilisateur);
     }
 
     /**
@@ -69,29 +70,29 @@ class UtilisateurController extends Controller
     {
         $utilisateur = User::find($id);
 
-    if (!$utilisateur) {
-        return response()->json(['message' => 'utilisateur introuvable'], 404);
-    }
+        if (!$utilisateur) {
+            return response()->json(['message' => 'utilisateur introuvable'], 404);
+        }
 
-    // Validation
-    $validator = Validator::make($request->all(), [
-            'nom_utilisateur'=> 'required|string|max:255',
-            'email_utilisateur'=> 'required|email',
-            'role_id'=> 'required|exists:roles,id',
-    // Ajout des champs optionnels du candidat aussi pour l’update
+        // Validation
+        $validator = Validator::make($request->all(), [
+            'nom_utilisateur' => 'required|string|max:255',
+            'email_utilisateur' => 'required|email',
+            'role_id' => 'required|exists:roles,id',
+            // Ajout des champs optionnels du candidat aussi pour l’update
             'cv_candidat' => 'nullable|string|max:255',
             'lettre_motivation' => 'nullable|string|max:255',
             'date_inscription' => 'nullable|date',
-    ]);
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json(['errors' => $validator->errors()], 422);
-    }
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
 
-    // Mise à jour
-    $utilisateur->update($validator->validated());
+        // Mise à jour
+        $utilisateur->update($validator->validated());
 
-    return response()->json(['message' => 'utilisateur mis à jour avec succès', 'utilisateur' => $utilisateur]);
+        return response()->json(['message' => 'utilisateur mis à jour avec succès', 'utilisateur' => $utilisateur]);
     }
 
     /**
@@ -101,19 +102,18 @@ class UtilisateurController extends Controller
     {
         $utilisateur = User::find($id);
 
-    if (!$utilisateur) {
+        if (!$utilisateur) {
+            return response()->json([
+                'message' => 'utilisateur introuvable'
+            ], 404);
+        }
+
+        $utilisateur->delete();
+
         return response()->json([
-            'message' => 'utilisateur introuvable'
-        ], 404);
+            'message' => 'utilisateur supprimé avec succès'
+        ], 200);
     }
-
-    $utilisateur->delete();
-
-    return response()->json([
-        'message' => 'utilisateur supprimé avec succès'
-    ], 200);
-    }
-
 
     public function changerMotDePasse(Request $request)
     {
@@ -146,5 +146,86 @@ class UtilisateurController extends Controller
         $utilisateur->save();
 
         return response()->json(['message' => 'Mot de passe mis à jour avec succès']);
+    }
+
+    // Kim Tsukasa
+
+    /**
+     * Register method
+     */
+    public function register(Request $request)
+    {
+        // 1. Validation
+        $validator = Validator::make($request->all(), [
+            'nom_utilisateur' => 'required|string|max:255',
+            'email_utilisateur' => 'required|email|unique:users,email_utilisateur',
+            'mot_passe' => 'required|string|min:6',
+            'role_id' => 'required|exists:roles,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // 2. Création de l’utilisateur
+        $user = User::create([
+            'nom_utilisateur' => $request->nom_utilisateur,
+            'email_utilisateur' => $request->email_utilisateur,
+            'mot_passe' => $request->mot_passe,  // Hashed automatiquement via mutator
+            'role_id' => $request->role_id,
+            'date_inscription' => now(),
+        ]);
+
+        // 3. Génération du token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Utilisateur enregistré avec succès',
+            'user' => $user,
+            'token' => $token
+        ], 201);
+    }
+
+    /**
+     * Login method
+     */
+    public function login(Request $request)
+    {
+        // 1. Validation des champs
+        $validator = Validator::make($request->all(), [
+            'email_utilisateur' => 'required|email',
+            'mot_passe' => 'required|string|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // 2. Recherche de l'utilisateur
+        $user = User::where('email_utilisateur', $request->email_utilisateur)->first();
+
+        if (!$user || !Hash::check($request->mot_passe, $user->mot_passe)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Identifiants invalides',
+            ], 401);
+        }
+
+        // 3. Génération d’un nouveau token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Connexion réussie',
+            'user' => $user,
+            'token' => $token,
+        ], 200);
     }
 }
