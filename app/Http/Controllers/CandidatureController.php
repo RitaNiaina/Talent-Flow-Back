@@ -14,7 +14,14 @@ class CandidatureController extends Controller
      */
     public function index()
     {
-        return response()->json(Candidature::with(['candidat', 'manager', 'offre'])->get());
+        return response()->json(
+            Candidature::with([
+                'candidat',
+                'manager',
+                'offre.recruteur',   // inclure aussi le recruteur lié à l'offre
+                'offre.tests'        // inclure les tests de l'offre
+            ])->get()
+        );
     }
 
     /**
@@ -22,27 +29,25 @@ class CandidatureController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            
+        $validator = Validator::make($request->all(), [
             'date_postule' => 'required|date',
             'etat_candidature' => 'required|in:en_attente,acceptee,refusee',
             'note_candidature' => 'nullable|integer',
             'candidat_id' => 'required|exists:users,id',
             'manager_id' => 'required|exists:users,id',
             'offre_id' => 'required|exists:offres,id',
-            
         ]);
-         // 2. Si la validation échoue, renvoyer les erreurs
-      if ($validator->fails()) {
-        return response()->json([
-          'errors' => $validator->errors()
-        ], 422);
-         }
-  
-         // 3. Créer l'offre si tout est bon
-         $candidature = Candidature::create($validator->validated());
-  
-         return response()->json($candidature, 201);
+    
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+    
+        $candidature = Candidature::create($validator->validated());
+    
+        // Charger aussi les relations pour renvoyer les infos complètes
+        $candidature->load(['candidat', 'manager', 'offre']);
+    
+        return response()->json($candidature, 201);
     }
 
     /**
@@ -50,11 +55,17 @@ class CandidatureController extends Controller
      */
     public function show($id)
     {
-        $candidature = Candidature::find($id);
-
+        $candidature = Candidature::with([
+            'candidat',
+            'manager',
+            'offre.recruteur',
+            'offre.tests'
+        ])->find($id);
+    
         if (!$candidature) {
-        return response()->json(['message' => 'candidature n existe pas'], 404);
-    }
+            return response()->json(['message' => 'candidature n existe pas'], 404);
+        }
+    
         return response()->json($candidature);
     }
 

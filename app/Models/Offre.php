@@ -19,5 +19,8 @@ class Offre extends Model
     return $this->hasMany(Candidature::class, 'offre_id');
     }
 
-
+    public function tests()
+    {
+        return $this->hasMany(Test::class, 'offre_id');
+    }
 }

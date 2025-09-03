@@ -15,7 +15,9 @@ class UtilisateurController extends Controller
      */
     public function index()
     {
-        return User::all();
+        return response()->json(
+            User::with('role')->get()
+        );
     }
 
     /**
@@ -55,12 +57,13 @@ class UtilisateurController extends Controller
      */
     public function show($id)
     {
-        $utilisateur = User::find($id);
+        $utilisateur = User::with('role')->find($id);
 
-        if (!$utilisateur) {
-            return response()->json(['message' => 'utilisateur n existe pas'], 404);
-        }
-        return response()->json($utilisateur);
+    if (!$utilisateur) {
+        return response()->json(['message' => 'utilisateur n existe pas'], 404);
+    }
+
+    return response()->json($utilisateur);
     }
 
     /**

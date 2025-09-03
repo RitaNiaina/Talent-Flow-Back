@@ -13,7 +13,9 @@ class OffreController extends Controller
      */
     public function index()
     {
-        return Offre::all();
+        return response()->json(
+            Offre::with(['recruteur', 'candidatures', 'tests'])->get()
+        );
     }
 
     /**
@@ -60,11 +62,12 @@ class OffreController extends Controller
      */
     public function show($id)
     {
-        $offre = Offre::find($id);
+        $offre = Offre::with(['recruteur', 'candidatures', 'tests'])->find($id);
 
         if (!$offre) {
         return response()->json(['message' => 'offre n existe pas'], 404);
-    }
+        }
+
         return response()->json($offre);
     }
 

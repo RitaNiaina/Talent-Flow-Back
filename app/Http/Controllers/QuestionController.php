@@ -14,7 +14,9 @@ class QuestionController extends Controller
      */
     public function index()
     {
-        return Question::all();
+        return response()->json(
+            Question::with('test')->get()
+        );
     }
 
     /**
@@ -49,11 +51,12 @@ class QuestionController extends Controller
      */
     public function show($id)
     {
-        $question = Question::find($id);
+        $question = Question::with('test')->find($id);
 
         if (!$question) {
         return response()->json(['message' => 'question n existe pas'], 404);
-    }
+        }
+
         return response()->json($question);
     }
 

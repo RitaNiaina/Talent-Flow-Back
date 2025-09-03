@@ -13,7 +13,9 @@ class TestController extends Controller
      */
     public function index()
     {
-        return Test::all();
+        return response()->json(
+            Test::with('offre')->get()
+        );
     }
 
     /**
@@ -48,12 +50,13 @@ class TestController extends Controller
      */
     public function show($id)
     {
-        $test = Test::find($id);
+        $test = Test::with('offre')->find($id);
 
-        if (!$test) {
+       if (!$test) {
         return response()->json(['message' => 'test n existe pas'], 404);
-        }
-        return response()->json($test);
+       }
+
+    return response()->json($test);
     }
 
     /**

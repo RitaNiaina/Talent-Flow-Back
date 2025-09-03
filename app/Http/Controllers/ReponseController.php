@@ -14,7 +14,9 @@ class ReponseController extends Controller
      */
     public function index()
     {
-        return Reponse::all();
+        return response()->json(
+            Reponse::with('question')->get()
+        );
     }
 
     /**
@@ -49,12 +51,13 @@ class ReponseController extends Controller
      */
     public function show($id)
     {
-        $reponse = Reponse::find($id);
+        $reponse = Reponse::with('question')->find($id);
 
-        if (!$reponse) {
+       if (!$reponse) {
         return response()->json(['message' => 'reponse n existe pas'], 404);
-        }
-        return response()->json($reponse);
+       }
+
+       return response()->json($reponse);
     }
 
     /**
