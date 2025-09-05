@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -44,10 +43,8 @@ class UtilisateurController extends Controller
             ], 422);
         }
 
-        // 3. Créer l'utilisateur si tout est bon
-        $validated = $validator->validated();
-        $validated['mot_passe'] = bcrypt($validated['mot_passe']);
-        $utilisateur = User::create($validated);
+        // 3. Créer l'utilisateur (mot de passe hashé automatiquement par le mutator)
+        $utilisateur = User::create($validator->validated());
 
         return response()->json($utilisateur, 201);
     }
@@ -59,11 +56,11 @@ class UtilisateurController extends Controller
     {
         $utilisateur = User::with('role')->find($id);
 
-    if (!$utilisateur) {
-        return response()->json(['message' => 'utilisateur n existe pas'], 404);
-    }
+        if (!$utilisateur) {
+            return response()->json(['message' => 'utilisateur n existe pas'], 404);
+        }
 
-    return response()->json($utilisateur);
+        return response()->json($utilisateur);
     }
 
     /**
@@ -82,7 +79,6 @@ class UtilisateurController extends Controller
             'nom_utilisateur' => 'required|string|max:255',
             'email_utilisateur' => 'required|email',
             'role_id' => 'required|exists:roles,id',
-            // Ajout des champs optionnels du candidat aussi pour l’update
             'cv_candidat' => 'nullable|string|max:255',
             'lettre_motivation' => 'nullable|string|max:255',
             'date_inscription' => 'nullable|date',
@@ -92,7 +88,6 @@ class UtilisateurController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Mise à jour
         $utilisateur->update($validator->validated());
 
         return response()->json(['message' => 'utilisateur mis à jour avec succès', 'utilisateur' => $utilisateur]);
@@ -120,7 +115,6 @@ class UtilisateurController extends Controller
 
     public function changerMotDePasse(Request $request)
     {
-        // 1. Validation des champs
         $validator = Validator::make($request->all(), [
             'ancien_mot_passe' => 'required|string',
             'nouveau_mot_passe' => 'required|string|min:6|confirmed',
@@ -132,39 +126,32 @@ class UtilisateurController extends Controller
             ], 422);
         }
 
-        // 2. Récupérer l'utilisateur connecté
         $utilisateur = auth()->user();
 
         if (!$utilisateur) {
             return response()->json(['message' => 'Utilisateur non authentifié'], 401);
         }
 
-        // 3. Vérifier si l'ancien mot de passe est correct
         if (!Hash::check($request->ancien_mot_passe, $utilisateur->mot_passe)) {
             return response()->json(['message' => 'Ancien mot de passe incorrect'], 403);
         }
 
-        // 4. Mettre à jour le mot de passe
         $utilisateur->mot_passe = Hash::make($request->nouveau_mot_passe);
         $utilisateur->save();
 
         return response()->json(['message' => 'Mot de passe mis à jour avec succès']);
     }
 
-    
-
     /**
      * Register method
      */
     public function register(Request $request)
     {
-        // 1. Validation
         $validator = Validator::make($request->all(), [
             'nom_utilisateur' => 'required|string|max:255',
             'email_utilisateur' => 'required|email|unique:users,email_utilisateur',
             'mot_passe' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
-            // Ajout des champs spécifiques au candidat (optionnels)
             'cv_candidat' => 'nullable|string|max:255',
             'lettre_motivation' => 'nullable|string|max:255',
             'date_inscription' => 'nullable|date',
@@ -177,18 +164,16 @@ class UtilisateurController extends Controller
             ], 422);
         }
 
-        // 2. Création de l’utilisateur
         $user = User::create([
             'nom_utilisateur' => $request->nom_utilisateur,
             'email_utilisateur' => $request->email_utilisateur,
-            'mot_passe' => $request->mot_passe,  // Hashed automatiquement via mutator
+            'mot_passe' => $request->mot_passe,
             'role_id' => $request->role_id,
             'cv_candidat' => $request->cv_candidat,
             'lettre_motivation' => $request->lettre_motivation,
             'date_inscription' => now(),
         ]);
 
-        // 3. Génération du token
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -204,7 +189,6 @@ class UtilisateurController extends Controller
      */
     public function login(Request $request)
     {
-        // 1. Validation des champs
         $validator = Validator::make($request->all(), [
             'email_utilisateur' => 'required|email',
             'mot_passe' => 'required|string|min:6',
@@ -217,7 +201,6 @@ class UtilisateurController extends Controller
             ], 422);
         }
 
-        // 2. Recherche de l'utilisateur
         $user = User::where('email_utilisateur', $request->email_utilisateur)->first();
 
         if (!$user || !Hash::check($request->mot_passe, $user->mot_passe)) {
@@ -227,7 +210,6 @@ class UtilisateurController extends Controller
             ], 401);
         }
 
-        // 3. Génération d’un nouveau token
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -236,5 +218,14 @@ class UtilisateurController extends Controller
             'user' => $user,
             'token' => $token,
         ], 200);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Déconnexion réussie'
+        ]);
     }
 }
