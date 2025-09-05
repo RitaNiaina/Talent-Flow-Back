@@ -10,10 +10,8 @@ use App\Http\Controllers\UtilisateurController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-
-Route::post('login', [UtilisateurController::class, 'login']);
+Route::post('login', [UtilisateurController::class, 'login'])->name('login');
 Route::post('register', [UtilisateurController::class, 'register']);
-
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
@@ -29,6 +27,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('candidature', CandidatureController::class);
     Route::apiResource('reponse', ReponseController::class);
 
-    
     Route::post('logout', [UtilisateurController::class, 'logout']);
 });
