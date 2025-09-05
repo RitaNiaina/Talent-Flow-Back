@@ -151,7 +151,7 @@ class UtilisateurController extends Controller
         return response()->json(['message' => 'Mot de passe mis à jour avec succès']);
     }
 
-    // Kim Tsukasa
+    
 
     /**
      * Register method
@@ -164,6 +164,10 @@ class UtilisateurController extends Controller
             'email_utilisateur' => 'required|email|unique:users,email_utilisateur',
             'mot_passe' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
+            // Ajout des champs spécifiques au candidat (optionnels)
+            'cv_candidat' => 'nullable|string|max:255',
+            'lettre_motivation' => 'nullable|string|max:255',
+            'date_inscription' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -179,6 +183,8 @@ class UtilisateurController extends Controller
             'email_utilisateur' => $request->email_utilisateur,
             'mot_passe' => $request->mot_passe,  // Hashed automatiquement via mutator
             'role_id' => $request->role_id,
+            'cv_candidat' => $request->cv_candidat,
+            'lettre_motivation' => $request->lettre_motivation,
             'date_inscription' => now(),
         ]);
 
