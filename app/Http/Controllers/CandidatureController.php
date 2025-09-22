@@ -14,14 +14,28 @@ class CandidatureController extends Controller
      */
     public function index()
     {
-        return response()->json(
-            Candidature::with([
-                'candidat',
-                'manager',
-                'offre.recruteur',   // inclure aussi le recruteur lié à l'offre
-                'offre.tests'        // inclure les tests de l'offre
-            ])->get()
-        );
+        $candidatures = Candidature::with([
+        'candidat:id,nom_utilisateur',   // relation vers User modèle pour candidat
+        'manager:id,nom_utilisateur',    // relation vers User modèle pour manager
+        'offre:id,titre_offre'           // relation vers Offre modèle
+    ])->get();
+
+    // Transformer les données pour le front
+    $result = $candidatures->map(function ($c) {
+        return [
+            'id' => $c->id,
+            'date_postule' => $c->date_postule,
+            'etat_candidature' => $c->etat_candidature,
+            'note_candidature' => $c->note_candidature,
+            'candidat_id' => $c->candidat_id,
+            'candidat_nom' => $c->candidat->nom_utilisateur ?? null,
+            'manager_id' => $c->manager_id,
+            'manager_nom' => $c->manager->nom_utilisateur ?? null,
+            'offre_id' => $c->offre_id,
+            'offre_titre' => $c->offre->titre_offre ?? null,
+        ];
+    });
+    return response()->json($result);
     }
 
     /**
