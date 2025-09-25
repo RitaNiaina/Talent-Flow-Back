@@ -3,15 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Reponse extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'contenu_reponse','date_soumission','question_id'
+        'contenu_reponse',
+        'date_soumission',
+        'question_id',
+        'candidat_id', // nouveau champ
     ];
+
+    // Relation vers Question
     public function question()
     {
-        // Relation vers le modèle question
         return $this->belongsTo(Question::class, 'question_id');
+    }
+
+    // Relation vers User (candidat)
+    public function candidat()
+    {
+        return $this->belongsTo(User::class, 'candidat_id');
     }
 }

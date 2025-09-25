@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Reponse;
 use App\Models\Question;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -13,38 +14,63 @@ class ReponseController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-    {
-        return response()->json(
-            Reponse::with('question')->get()
-        );
+{
+    try {
+        $reponses = Reponse::with(['question', 'candidat'])->get(); // 'candidat' doit être défini dans le modèle Reponse
+        return response()->json($reponses);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        // 1. Valider les données
-       $validator = Validator::make($request->all(), [
-            
+{
+    // Vérifier que l'utilisateur est authentifié
+    // $candidat = auth()->user();
+    // if (!$candidat) {
+    //     return response()->json([
+    //         'message' => 'Utilisateur non authentifié'
+    //     ], 401);
+    // }
+
+    // Valider les données reçues
+    $validator = Validator::make($request->all(), [
         'contenu_reponse' => 'required|string',
         'date_soumission' => 'required|date',
         'question_id' => 'required|exists:questions,id',
-       ]);
+        'candidat_id' => 'required|exists:users,id',
+    ]);
 
-      // 2. Si la validation échoue, renvoyer les erreurs
-      if ($validator->fails()) {
-      return response()->json([
-        'errors' => $validator->errors()
-      ], 422);
-       }
-
-       // 3. Créer l'offre si tout est bon
-       $reponse = Reponse::create($validator->validated());
-
-
-       return response()->json($reponse, 201);
+    if ($validator->fails()) {
+        return response()->json([
+            'errors' => $validator->errors()
+        ], 422);
     }
+
+    // // Créer la réponse avec le candidat authentifié
+    // $reponse = Reponse::create([
+    //     'contenu_reponse' => $request->contenu_reponse,
+    //     'date_soumission' => $request->date_soumission,
+    //     'question_id' => $request->question_id,
+    //     'candidat_id' => $candidat->id, // Associer la réponse au candidat
+    // ]);
+    $reponse = Reponse::create($validator->validated());
+    return response()->json($reponse, 201);
+    // // Retourner la réponse créée avec ses relations
+    // $reponse->load('question');
+
+    return response()->json([
+        'message' => 'Réponse créée avec succès',
+        'reponse' => $reponse
+    ], 201);
+}
+
 
     /**
      * Display the specified resource.
