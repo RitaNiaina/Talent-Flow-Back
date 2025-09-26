@@ -17,12 +17,11 @@ Route::post('register', [UtilisateurController::class, 'register']);
 
 
 Route::middleware('auth:sanctum')->group(function () {
+
     Route::get('/user', function (Request $request) {
+    
         return $request->user();
     });
-
-    
-});
     Route::apiResource('offre', OffreController::class);
     Route::apiResource('roles', RoleController::class);
     Route::apiResource('utilisateur', UtilisateurController::class);
@@ -35,3 +34,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('logout', [UtilisateurController::class, 'logout']);
     Route::get('stats', [StatsController::class, 'index']);
+    
+});
+    
