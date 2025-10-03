@@ -6,6 +6,7 @@ use App\Models\Offre;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+
 class OffreController extends Controller
 {
     /**
@@ -14,7 +15,7 @@ class OffreController extends Controller
     public function index()
     {
         return response()->json(
-            Offre::with(['recruteur', 'candidatures', 'tests'])->get()
+            Offre::with(['recruteur', 'candidatures', 'tests', 'competences'])->get()
         );
     }
 
@@ -24,37 +25,40 @@ class OffreController extends Controller
     public function store(Request $request)
     {
         // 1. Valider les données
-       $validator = Validator::make($request->all(), [
-            
+        $validator = Validator::make($request->all(), [
             'titre_offre' => 'required|string|max:255',
             'description_offre' => 'required|string',
             'date_publication' => 'required|date',
             'date_expiration' => 'nullable|date|after_or_equal:date_publication',
             'statut_offre' => 'in:ouvert,fermé,en_attente',
             'recruteur_id' => 'required|exists:users,id',
-    ]);
+            'type_offre' => 'required|string|max:255',   
+            'lieu_offre' => 'required|string|max:255',   
+            'competences' => 'array', 
+            'competences.*' => 'exists:competences,id' 
+        ]);
 
-    // 2. Si la validation échoue, renvoyer les erreurs
-    if ($validator->fails()) {
-        return response()->json([
-            'errors' => $validator->errors()
-        ], 422);
-    }
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
 
-    // 3. Créer l'offre si tout est bon
-    $offre = Offre::create($validator->validated());
+        $data = $validator->validated();
 
-    return response()->json($offre, 201);
+        // Vérifier que le recruteur est bien un recruteur
+        $utilisateur = User::find($data['recruteur_id']);
+        if (!$utilisateur || $utilisateur->role->nom !== 'recruteur') {
+            return response()->json(['error' => 'Cet utilisateur n\'est pas un recruteur'], 403);
+        }
 
-    // Vérifier que le recruteur_id correspond bien à un utilisateur avec le rôle "recruteur"
-    $utilisateur = User::find($request->recruteur_id);
-    if ($utilisateur->role->nom !== 'recruteur') {
-        return response()->json(['error' => 'Cet utilisateur n\'est pas un recruteur'], 403);
-    }
+        // Créer l'offre
+        $offre = Offre::create($data);
 
-    $offre = Offre::create($request->all());
+        // Attacher les compétences si fournies
+        if (isset($data['competences'])) {
+            $offre->competences()->attach($data['competences']);
+        }
 
-    return response()->json($offre, 201);
+        return response()->json($offre->load('competences'), 201);
     }
 
     /**
@@ -62,10 +66,10 @@ class OffreController extends Controller
      */
     public function show($id)
     {
-        $offre = Offre::with(['recruteur', 'candidatures', 'tests'])->find($id);
+        $offre = Offre::with(['recruteur', 'candidatures', 'tests', 'competences'])->find($id);
 
         if (!$offre) {
-        return response()->json(['message' => 'offre n existe pas'], 404);
+            return response()->json(['message' => 'Offre introuvable'], 404);
         }
 
         return response()->json($offre);
@@ -81,25 +85,37 @@ class OffreController extends Controller
         if (!$offre) {
             return response()->json(['message' => 'Offre introuvable'], 404);
         }
-    
-        // Validation
+
         $validator = Validator::make($request->all(), [
             'titre_offre' => 'sometimes|required|string|max:255',
             'description_offre' => 'sometimes|required|string',
             'date_publication' => 'sometimes|required|date',
             'date_expiration' => 'nullable|date|after_or_equal:date_publication',
             'statut_offre' => 'in:ouvert,fermé,en_attente',
-            
+            'type_offre' => 'sometimes|required|string|max:255',
+            'lieu_offre' => 'sometimes|required|string|max:255',
+            'competences' => 'array',
+            'competences.*' => 'exists:competences,id'
         ]);
-    
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-    
-        // Mise à jour
-        $offre->update($validator->validated());
-    
-        return response()->json(['message' => 'Offre mis à jour avec succès', 'offre' => $offre]);
+
+        $data = $validator->validated();
+
+        // Mise à jour de l'offre
+        $offre->update($data);
+
+        // Mise à jour des compétences si fournies
+        if (isset($data['competences'])) {
+            $offre->competences()->sync($data['competences']); 
+        }
+
+        return response()->json([
+            'message' => 'Offre mise à jour avec succès',
+            'offre' => $offre->load('competences')
+        ]);
     }
 
     /**
@@ -109,17 +125,15 @@ class OffreController extends Controller
     {
         $offre = Offre::find($id);
 
-    if (!$offre) {
-        return response()->json([
-            'message' => 'Offre introuvable'
-        ], 404);
-    }
+        if (!$offre) {
+            return response()->json(['message' => 'Offre introuvable'], 404);
+        }
 
-    $offre->delete();
+        // Supprimer les relations pivot d'abord (facultatif car cascade)
+        $offre->competences()->detach();
 
-    return response()->json([
-        'message' => 'Offre supprimé avec succès'
-    ], 200);
+        $offre->delete();
 
+        return response()->json(['message' => 'Offre supprimée avec succès'], 200);
     }
 }

@@ -16,7 +16,7 @@ class ReponseController extends Controller
     public function index()
 {
     try {
-        $reponses = Reponse::with(['question', 'candidat'])->get(); // 'candidat' doit être défini dans le modèle Reponse
+        $reponses = Reponse::with(['question', 'candidat'])->get(); 
         return response()->json($reponses);
     } catch (\Exception $e) {
         return response()->json([
@@ -31,20 +31,11 @@ class ReponseController extends Controller
      */
     public function store(Request $request)
 {
-    // Vérifier que l'utilisateur est authentifié
-    // $candidat = auth()->user();
-    // if (!$candidat) {
-    //     return response()->json([
-    //         'message' => 'Utilisateur non authentifié'
-    //     ], 401);
-    // }
-
-    // Valider les données reçues
     $validator = Validator::make($request->all(), [
         'contenu_reponse' => 'required|string',
         'date_soumission' => 'required|date',
         'question_id' => 'required|exists:questions,id',
-        'candidat_id' => 'required|exists:users,id',
+        'candidat_id' => 'nullable|exists:users,id',
     ]);
 
     if ($validator->fails()) {
@@ -53,23 +44,17 @@ class ReponseController extends Controller
         ], 422);
     }
 
-    // // Créer la réponse avec le candidat authentifié
-    // $reponse = Reponse::create([
-    //     'contenu_reponse' => $request->contenu_reponse,
-    //     'date_soumission' => $request->date_soumission,
-    //     'question_id' => $request->question_id,
-    //     'candidat_id' => $candidat->id, // Associer la réponse au candidat
-    // ]);
     $reponse = Reponse::create($validator->validated());
-    return response()->json($reponse, 201);
-    // // Retourner la réponse créée avec ses relations
-    // $reponse->load('question');
+
+    // Charger les relations question et candidat
+    $reponse->load('question', 'candidat');
 
     return response()->json([
         'message' => 'Réponse créée avec succès',
         'reponse' => $reponse
     ], 201);
 }
+
 
 
     /**
