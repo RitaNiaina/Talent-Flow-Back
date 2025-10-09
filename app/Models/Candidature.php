@@ -6,13 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Candidature extends Model
 {
-    
     protected $fillable = [
         'date_postule',
         'etat_candidature',
-        'note_candidature',
+        'cv_candidat',
+        'lettre_motivation',
         'candidat_id',
-        'manager_id',
         'offre_id',
     ];
 
@@ -20,11 +19,6 @@ class Candidature extends Model
     public function candidat()
     {
         return $this->belongsTo(User::class, 'candidat_id');
-    }
-
-    public function manager()
-    {
-        return $this->belongsTo(User::class, 'manager_id');
     }
 
     public function offre()
