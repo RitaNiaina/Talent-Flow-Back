@@ -106,4 +106,17 @@ class TestController extends Controller
         'message' => 'test supprimé avec succès'
     ], 200);
     }
+   
+public function getByOffre($offre_id)
+{
+    $test = Test::with(['questions.reponses'])->where('offre_id', $offre_id)->first();
+
+    if (!$test) {
+        return response()->json(['message' => 'test n existe pas'], 404);
+    }
+
+    return response()->json($test);
+}
+
+
 }

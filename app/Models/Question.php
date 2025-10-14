@@ -14,4 +14,9 @@ class Question extends Model
         // Relation vers le modèle Test
         return $this->belongsTo(Test::class, 'test_id');
     }
+    public function reponses()
+{
+    return $this->hasMany(Reponse::class, 'question_id');
+}
+
 }

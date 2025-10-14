@@ -150,4 +150,23 @@ class OffreController extends Controller
 
         return response()->json(['message' => 'Offre supprimée avec succès'], 200);
     }
+
+    /**
+ * Afficher les détails complets d'une offre (tests, questions, réponses)
+ */
+public function getDetailsComplet($id)
+{
+    $offre = Offre::with([
+        'recruteur',
+        'competences',
+        'tests.questions.reponses'
+    ])->find($id);
+
+    if (!$offre) {
+        return response()->json(['message' => 'Offre introuvable'], 404);
+    }
+
+    return response()->json($offre);
+}
+
 }

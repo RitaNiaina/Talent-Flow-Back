@@ -14,4 +14,9 @@ class Test extends Model
         // Relation vers le modèle Offre
         return $this->belongsTo(Offre::class, 'offre_id');
     }
+    public function questions()
+{
+    return $this->hasMany(Question::class, 'test_id');
+}
+
 }

@@ -13,16 +13,21 @@ class Reponse extends Model
         'contenu_reponse',
         'date_soumission',
         'question_id',
-        'candidat_id', // nouveau champ
+        'candidat_id',        // lien vers le candidat
+        'reponse_correcte',   // nouveau champ Vrai/Faux
     ];
 
-    // Relation vers Question
+    /**
+     * Relation vers Question
+     */
     public function question()
     {
         return $this->belongsTo(Question::class, 'question_id');
     }
 
-    // Relation vers User (candidat)
+    /**
+     * Relation vers User (candidat)
+     */
     public function candidat()
     {
         return $this->belongsTo(User::class, 'candidat_id');

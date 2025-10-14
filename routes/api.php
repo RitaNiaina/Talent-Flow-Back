@@ -38,3 +38,6 @@ Route::apiResource('reponse', ReponseController::class);
 Route::apiResource('competences', CompetenceController::class);
 Route::post('logout', [UtilisateurController::class, 'logout']);
 Route::get('stats', [StatsController::class, 'index']);
+
+Route::get('offre/{id}/details-complet', [OffreController::class, 'getDetailsComplet']);
+Route::get('offres/{offre_id}/test', [TestController::class, 'getByOffre']);
