@@ -76,7 +76,7 @@ class ReponseController extends Controller
                 'question_id' => $r['question_id'],
                 'contenu_reponse' => $r['contenu_reponse'],
                 'reponse_correcte' => $r['reponse_correcte'],
-                'date_soumission' => $r['date_soumission'] ?? now(),
+                'date_soumission' => $r['date_soumission'] ?? null, // ✅ modifié ici
             ]);
         }
 
@@ -127,7 +127,7 @@ class ReponseController extends Controller
                 $reponse->update([
                     'contenu_reponse' => $r['contenu_reponse'],
                     'reponse_correcte' => $r['reponse_correcte'],
-                    'date_soumission' => $r['date_soumission'] ?? now(),
+                    'date_soumission' => $r['date_soumission'] ?? null, // ✅ modifié ici
                     'candidat_id' => $r['candidat_id'] ?? null,
                 ]);
                 $reponse->load('question', 'candidat');

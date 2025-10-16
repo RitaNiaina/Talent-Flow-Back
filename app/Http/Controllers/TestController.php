@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Test;
 use App\Models\Offre;
+use App\Models\Question;
+use App\Models\Reponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 class TestController extends Controller
 {
@@ -118,5 +121,180 @@ public function getByOffre($offre_id)
     return response()->json($test);
 }
 
+public function storeWithQuestions(Request $request)
+{
+    $request->validate([
+        'nom_test' => 'required|string',
+        'description_test' => 'required|string',
+        'duree_test' => 'required|string',
+        'offre_id' => 'required|integer|exists:offres,id',
+        'questions' => 'required|array|min:1',
+        'questions.*.intitule_question' => 'required|string',
+        'questions.*.points_question' => 'required|integer|min:1',
+        'questions.*.reponses' => 'required|array|min:1',
+        'questions.*.reponses.*.contenu_reponse' => 'required|string',
+        'questions.*.reponses.*.correcte' => 'required|in:Vrai,Faux',
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        // 1️⃣ Créer le test
+        $test = Test::create([
+            'nom_test' => $request->nom_test,
+            'description_test' => $request->description_test,
+            'duree_test' => $request->duree_test,
+            'offre_id' => $request->offre_id,
+        ]);
+
+        // 2️⃣ Créer les questions et réponses
+        foreach ($request->questions as $q) {
+            $question = Question::create([
+                'intitule_question' => $q['intitule_question'],
+                'type_question' => $q['type_question'] ?? 'QCM',
+                'points_question' => $q['points_question'],
+                'test_id' => $test->id,
+            ]);
+
+            foreach ($q['reponses'] as $r) {
+                Reponse::create([
+                    'contenu_reponse' => $r['contenu_reponse'],
+                    'reponse_correcte' => $r['correcte'],
+                    'question_id' => $question->id,
+                    'candidat_id' => null,
+                    'date_soumission' => null,
+                ]);
+            }
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Test avec questions et réponses créé avec succès',
+            'test_id' => $test->id,
+        ], 201);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Erreur lors de la création du test',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+public function updateWithQuestions(Request $request, $id)
+{
+    $test = Test::find($id);
+    if (!$test) {
+        return response()->json(['message' => 'Test introuvable'], 404);
+    }
+
+    $request->validate([
+        'nom_test' => 'required|string',
+        'description_test' => 'required|string',
+        'duree_test' => 'required|string',
+        'offre_id' => 'required|integer|exists:offres,id',
+        'questions' => 'required|array|min:1',
+        'questions.*.id' => 'nullable|integer|exists:questions,id',
+        'questions.*.intitule_question' => 'required|string',
+        'questions.*.points_question' => 'required|integer|min:1',
+        'questions.*.reponses' => 'required|array|min:1',
+        'questions.*.reponses.*.id' => 'nullable|integer|exists:reponses,id',
+        'questions.*.reponses.*.contenu_reponse' => 'required|string',
+        'questions.*.reponses.*.correcte' => 'required|in:Vrai,Faux',
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        // 1️⃣ Mettre à jour le test
+        $test->update([
+            'nom_test' => $request->nom_test,
+            'description_test' => $request->description_test,
+            'duree_test' => $request->duree_test,
+            'offre_id' => $request->offre_id,
+        ]);
+
+        $existingQuestionIds = $test->questions()->pluck('id')->toArray();
+
+        // 2️⃣ Parcourir les questions
+        foreach ($request->questions as $q) {
+            if (!empty($q['id']) && in_array($q['id'], $existingQuestionIds)) {
+                // Mettre à jour la question existante
+                $question = Question::find($q['id']);
+                $question->update([
+                    'intitule_question' => $q['intitule_question'],
+                    'points_question' => $q['points_question'],
+                ]);
+            } else {
+                // Créer une nouvelle question
+                $question = Question::create([
+                    'intitule_question' => $q['intitule_question'],
+                    'type_question' => 'QCM',
+                    'points_question' => $q['points_question'],
+                    'test_id' => $test->id,
+                ]);
+            }
+
+            $existingReponseIds = $question->reponses()->pluck('id')->toArray();
+
+            // 3️⃣ Parcourir les réponses
+            foreach ($q['reponses'] as $r) {
+                if (!empty($r['id']) && in_array($r['id'], $existingReponseIds)) {
+                    $reponse = Reponse::find($r['id']);
+                    $reponse->update([
+                        'contenu_reponse' => $r['contenu_reponse'],
+                        'reponse_correcte' => $r['correcte'],
+                    ]);
+                } else {
+                    Reponse::create([
+                        'contenu_reponse' => $r['contenu_reponse'],
+                        'reponse_correcte' => $r['correcte'],
+                        'question_id' => $question->id,
+                        'candidat_id' => null,
+                        'date_soumission' => null,
+                    ]);
+                }
+            }
+
+            // Supprimer les réponses qui ont été retirées côté frontend
+            $reponseIdsToKeep = collect($q['reponses'])->pluck('id')->filter()->toArray();
+            Reponse::where('question_id', $question->id)
+                ->whereNotIn('id', $reponseIdsToKeep)
+                ->delete();
+        }
+
+        // Supprimer les questions qui ont été retirées côté frontend
+        $questionIdsToKeep = collect($request->questions)->pluck('id')->filter()->toArray();
+        Question::where('test_id', $test->id)
+            ->whereNotIn('id', $questionIdsToKeep)
+            ->delete();
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Test avec questions et réponses mis à jour avec succès',
+            'test_id' => $test->id,
+        ], 200);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Erreur lors de la mise à jour du test',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+public function showWithQuestions($id)
+{
+    $test = Test::with(['questions.reponses'])->find($id);
+
+    if (!$test) {
+        return response()->json(['message' => 'Test introuvable'], 404);
+    }
+
+    return response()->json($test);
+}
 
 }

@@ -41,3 +41,6 @@ Route::get('stats', [StatsController::class, 'index']);
 
 Route::get('offre/{id}/details-complet', [OffreController::class, 'getDetailsComplet']);
 Route::get('offres/{offre_id}/test', [TestController::class, 'getByOffre']);
+Route::post('/test-complet', [TestController::class, 'storeWithQuestions']);
+Route::put('/test-complet/{id}', [TestController::class, 'updateWithQuestions']);
+Route::get('/test-complet/{id}', [TestController::class, 'showWithQuestions']);

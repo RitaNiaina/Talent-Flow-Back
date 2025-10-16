@@ -3,14 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Question;
-use App\Models\Test;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class QuestionController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Afficher toutes les questions
      */
     public function index()
     {
@@ -20,92 +19,109 @@ class QuestionController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Ajouter une ou plusieurs questions
      */
     public function store(Request $request)
     {
-        // 1. Valider les données
-       $validator = Validator::make($request->all(), [
-            
-        'intitule_question' => 'required|string',
-        'type_question' => 'required|string|max:255',
-        'points_question' => 'required|integer',
-        'test_id' => 'required|exists:tests,id',
-       ]);
+        $validator = Validator::make($request->all(), [
+            'test_id' => 'required|exists:tests,id',
+            'questions' => 'required|array|min:1',
+            'questions.*.intitule_question' => 'required|string',
+            'questions.*.type_question' => 'required|in:QCM', 
+            'questions.*.points_question' => 'required|integer|min:0',
+        ]);
 
-      // 2. Si la validation échoue, renvoyer les erreurs
-      if ($validator->fails()) {
-      return response()->json([
-        'errors' => $validator->errors()
-      ], 422);
-       }
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
 
-       // 3. Créer l'offre si tout est bon
-       $question = Question::create($validator->validated());
+        $validated = $validator->validated();
 
-       return response()->json($question, 201);
+        // Création des questions
+        $created = [];
+        foreach ($validated['questions'] as $q) {
+            $created[] = Question::create([
+                'intitule_question' => $q['intitule_question'],
+                'type_question' => 'QCM', 
+                'points_question' => $q['points_question'],
+                'test_id' => $validated['test_id'], 
+            ]);
+        }
+
+        foreach ($created as $q) {
+            $q->load('test');
+        }
+
+        return response()->json([
+            'message' => 'Questions créées avec succès',
+            'questions' => $created
+        ], 201);
     }
 
     /**
-     * Display the specified resource.
+     * Afficher une question spécifique
      */
     public function show($id)
     {
         $question = Question::with('test')->find($id);
 
         if (!$question) {
-        return response()->json(['message' => 'question n existe pas'], 404);
+            return response()->json(['message' => 'question n\'existe pas'], 404);
         }
 
         return response()->json($question);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Mettre à jour une ou plusieurs questions
      */
-    public function update(Request $request, $id)
+    public function update(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'questions' => 'required|array|min:1',
+            'questions.*.id' => 'required|exists:questions,id',
+            'questions.*.intitule_question' => 'required|string',
+            'questions.*.type_question' => 'required|in:QCM', 
+            'questions.*.points_question' => 'required|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $updated = [];
+        foreach ($request->questions as $q) {
+            $question = Question::find($q['id']);
+            if ($question) {
+                $question->update([
+                    'intitule_question' => $q['intitule_question'],
+                    'type_question' => 'QCM', 
+                    'points_question' => $q['points_question'],
+                ]);
+                $question->load('test');
+                $updated[] = $question;
+            }
+        }
+
+        return response()->json([
+            'message' => 'Questions mises à jour avec succès',
+            'questions' => $updated
+        ]);
+    }
+
+    /**
+     * Supprimer une question
+     */
+    public function destroy($id)
     {
         $question = Question::find($id);
 
         if (!$question) {
             return response()->json(['message' => 'question introuvable'], 404);
         }
-    
-        // Validation
-        $validator = Validator::make($request->all(), [
-            'intitule_question' => 'required|string',
-            'type_question' => 'required|string|max:255',
-            'points_question' => 'required|integer',
-        ]);
-    
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-    
-        // Mise à jour
-        $question->update($validator->validated());
-    
-        return response()->json(['message' => 'question mis à jour avec succès', 'question' => $question]);
-    }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
-    {
-        $question = Question::find($id);
+        $question->delete();
 
-    if (!$question) {
-        return response()->json([
-            'message' => 'question introuvable'
-        ], 404);
-    }
-
-    $question->delete();
-
-    return response()->json([
-        'message' => 'question supprimé avec succès'
-    ], 200);
-    
+        return response()->json(['message' => 'question supprimée avec succès'], 200);
     }
 }
