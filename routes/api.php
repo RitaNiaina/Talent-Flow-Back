@@ -44,3 +44,5 @@ Route::get('offres/{offre_id}/test', [TestController::class, 'getByOffre']);
 Route::post('/test-complet', [TestController::class, 'storeWithQuestions']);
 Route::put('/test-complet/{id}', [TestController::class, 'updateWithQuestions']);
 Route::get('/test-complet/{id}', [TestController::class, 'showWithQuestions']);
+Route::post('/submitTest', [ReponseController::class, 'submitTest']);
+Route::put('/candidatures/{id}/refuser', [CandidatureController::class, 'refuserCandidature']);

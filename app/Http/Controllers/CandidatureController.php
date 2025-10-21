@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Candidature;
+use App\Models\Note;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
@@ -14,35 +15,41 @@ class CandidatureController extends Controller
      * Afficher toutes les candidatures.
      */
     public function index(Request $request)
-{
-    $query = Candidature::with([
-        'candidat:id,nom_utilisateur',
-        'offre:id,titre_offre'
-    ]);
+    {
+        $query = Candidature::with([
+            'candidat:id,nom_utilisateur',
+            'offre:id,titre_offre'
+        ]);
 
-    // Si un candidat_id est fourni, ne récupérer que ses candidatures
-    if ($request->has('candidat_id')) {
-        $query->where('candidat_id', $request->candidat_id);
+        if ($request->has('candidat_id')) {
+            $query->where('candidat_id', $request->candidat_id);
+        }
+
+        $candidatures = $query->get();
+
+        $result = $candidatures->map(function ($c) {
+            $note = Note::where('candidat_id', $c->candidat_id)
+                ->whereHas('test', function ($q) use ($c) {
+                    $q->where('offre_id', $c->offre_id);
+                })
+                ->value('note_candidat');
+
+            return [
+                'id' => $c->id,
+                'cv_candidat' => $c->cv_candidat ? asset('storage/' . $c->cv_candidat) : null,
+                'lettre_motivation' => $c->lettre_motivation ? asset('storage/' . $c->lettre_motivation) : null,
+                'date_postule' => $c->date_postule,
+                'etat_candidature' => $c->etat_candidature,
+                'candidat_id' => $c->candidat_id,
+                'candidat_nom' => $c->candidat->nom_utilisateur ?? null,
+                'offre_id' => $c->offre_id,
+                'offre_titre' => $c->offre->titre_offre ?? null,
+                'note_candidat' => $note ?? null,
+            ];
+        });
+
+        return response()->json($result);
     }
-
-    $candidatures = $query->get();
-
-    $result = $candidatures->map(function ($c) {
-        return [
-            'id' => $c->id,
-            'cv_candidat' => $c->cv_candidat,
-            'lettre_motivation' => $c->lettre_motivation,
-            'date_postule' => $c->date_postule,
-            'etat_candidature' => $c->etat_candidature,
-            'candidat_id' => $c->candidat_id,
-            'candidat_nom' => $c->candidat->nom_utilisateur ?? null,
-            'offre_id' => $c->offre_id,
-            'offre_titre' => $c->offre->titre_offre ?? null,
-        ];
-    });
-
-    return response()->json($result);
-}
 
     /**
      * Créer une nouvelle candidature avec upload CV/lettre.
@@ -77,6 +84,10 @@ class CandidatureController extends Controller
         $candidature = Candidature::create($validated);
         $candidature->load(['candidat', 'offre']);
 
+        // Générer les URLs publiques
+        $candidature->cv_candidat = $candidature->cv_candidat ? asset('storage/' . $candidature->cv_candidat) : null;
+        $candidature->lettre_motivation = $candidature->lettre_motivation ? asset('storage/' . $candidature->lettre_motivation) : null;
+
         return response()->json([
             'message' => 'Candidature créée avec succès',
             'candidature' => $candidature
@@ -93,6 +104,10 @@ class CandidatureController extends Controller
         if (!$candidature) {
             return response()->json(['message' => 'Candidature non trouvée'], 404);
         }
+
+        // Générer les URLs publiques
+        $candidature->cv_candidat = $candidature->cv_candidat ? asset('storage/' . $candidature->cv_candidat) : null;
+        $candidature->lettre_motivation = $candidature->lettre_motivation ? asset('storage/' . $candidature->lettre_motivation) : null;
 
         return response()->json($candidature);
     }
@@ -122,7 +137,6 @@ class CandidatureController extends Controller
 
         $validated = $validator->validated();
 
-        // Si nouveaux fichiers, uploader
         if ($request->hasFile('cv_candidat')) {
             $validated['cv_candidat'] = $request->file('cv_candidat')->store('cvs', 'public');
         }
@@ -133,9 +147,32 @@ class CandidatureController extends Controller
 
         $candidature->update($validated);
 
+        // Générer les URLs publiques
+        $candidature->cv_candidat = $candidature->cv_candidat ? asset('storage/' . $candidature->cv_candidat) : null;
+        $candidature->lettre_motivation = $candidature->lettre_motivation ? asset('storage/' . $candidature->lettre_motivation) : null;
+
         return response()->json([
             'message' => 'Candidature mise à jour avec succès',
             'candidature' => $candidature
+        ]);
+    }
+
+    /**
+     * Refuser une candidature
+     */
+    public function refuserCandidature($id)
+    {
+        $candidature = Candidature::find($id);
+
+        if (!$candidature) {
+            return response()->json(['message' => 'Candidature introuvable'], 404);
+        }
+
+        $candidature->update(['etat_candidature' => 'refusee']);
+
+        return response()->json([
+            'message' => 'Candidature refusée avec succès',
+            'etat_candidature' => $candidature->etat_candidature
         ]);
     }
 
