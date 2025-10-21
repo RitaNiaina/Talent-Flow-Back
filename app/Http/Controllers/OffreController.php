@@ -1,9 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Models\Offre;
 use App\Models\User;
+use App\Models\Candidature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -168,5 +168,24 @@ public function getDetailsComplet($id)
 
     return response()->json($offre);
 }
+
+
+
+public function hasApplied($offreId, $candidatId)
+{
+    // Vérifie que l'offre existe
+    $offre = \App\Models\Offre::find($offreId);
+    if (!$offre) {
+        return response()->json(['error' => 'Offre non trouvée'], 404);
+    }
+
+    // Vérifie si le candidat a déjà postulé
+    $hasApplied = \App\Models\Candidature::where('offre_id', $offreId)
+        ->where('candidat_id', $candidatId)
+        ->exists();
+
+    return response()->json(['hasApplied' => $hasApplied]);
+}
+
 
 }

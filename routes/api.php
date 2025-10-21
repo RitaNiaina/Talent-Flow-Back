@@ -46,3 +46,4 @@ Route::put('/test-complet/{id}', [TestController::class, 'updateWithQuestions'])
 Route::get('/test-complet/{id}', [TestController::class, 'showWithQuestions']);
 Route::post('/submitTest', [ReponseController::class, 'submitTest']);
 Route::put('/candidatures/{id}/refuser', [CandidatureController::class, 'refuserCandidature']);
+Route::get('/offres/{offreId}/has-applied/{candidatId}', [OffreController::class, 'hasApplied']);
