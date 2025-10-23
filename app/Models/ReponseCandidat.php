@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class ReponseCandidat extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'candidat_id',
+        'question_id',
+        'reponse_id',
+        'contenu_reponse',
+        'reponse_correcte',
+    ];
+
+    public function question() {
+        return $this->belongsTo(Question::class);
+    }
+
+    public function candidat() {
+        return $this->belongsTo(User::class, 'candidat_id');
+    }
+
+    public function reponse() {
+        return $this->belongsTo(Reponse::class);
+    }
+}
