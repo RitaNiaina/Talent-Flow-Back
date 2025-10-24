@@ -11,7 +11,6 @@ class Reponse extends Model
 
     protected $fillable = [
         'contenu_reponse',
-        'date_soumission',
         'question_id',
         'candidat_id',        // lien vers le candidat
         'reponse_correcte',   // nouveau champ Vrai/Faux

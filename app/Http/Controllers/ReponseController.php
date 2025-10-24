@@ -39,7 +39,6 @@ class ReponseController extends Controller
             'reponses.*.question_id' => 'required|exists:questions,id',
             'reponses.*.contenu_reponse' => 'required|string',
             'reponses.*.reponse_correcte' => 'required|in:Vrai,Faux',
-            'reponses.*.date_soumission' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -74,12 +73,10 @@ class ReponseController extends Controller
         $created = [];
         foreach ($validated['reponses'] as $r) {
             $created[] = Reponse::create([
-                // on récupère le candidat_id global s’il existe, sinon celui dans la réponse, sinon null
                 'candidat_id' => $validated['candidat_id'] ?? $r['candidat_id'] ?? null,
                 'question_id' => $r['question_id'],
                 'contenu_reponse' => $r['contenu_reponse'],
                 'reponse_correcte' => $r['reponse_correcte'],
-                'date_soumission' => $r['date_soumission'] ?? null, // ✅ modifié ici
             ]);
         }
 
@@ -115,7 +112,6 @@ class ReponseController extends Controller
             'reponses.*.id' => 'required|exists:reponses,id',
             'reponses.*.contenu_reponse' => 'required|string',
             'reponses.*.reponse_correcte' => 'required|in:Vrai,Faux',
-            'reponses.*.date_soumission' => 'nullable|date',
             'reponses.*.candidat_id' => 'nullable|exists:users,id',
         ]);
 
@@ -130,7 +126,6 @@ class ReponseController extends Controller
                 $reponse->update([
                     'contenu_reponse' => $r['contenu_reponse'],
                     'reponse_correcte' => $r['reponse_correcte'],
-                    'date_soumission' => $r['date_soumission'] ?? null, // ✅ modifié ici
                     'candidat_id' => $r['candidat_id'] ?? null,
                 ]);
                 $reponse->load('question', 'candidat');
@@ -159,63 +154,105 @@ class ReponseController extends Controller
         return response()->json(['message' => 'Réponse supprimée avec succès'], 200);
     }
 
+    /**
+     * Soumettre un test par un candidat
+     */
     public function submitTest(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'candidat_id' => 'required|exists:users,id',
-            'offre_id' => 'required|exists:offres,id',
-            'reponses' => 'required|array',
-            'reponses.*.question_id' => 'required|exists:questions,id',
-            'reponses.*.reponse_id' => 'required|exists:reponses,id',
-        ]);
-    
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-    
-        $validated = $validator->validated();
-        $candidat_id = $validated['candidat_id'];
-        $noteFinale = 0;
-    
-        foreach ($validated['reponses'] as $r) {
-            $reponse = \App\Models\Reponse::find($r['reponse_id']);
-    
-            // Stocke la réponse du candidat
-            ReponseCandidat::create([
-                'candidat_id' => $candidat_id,
-                'question_id' => $r['question_id'],
-                'reponse_id' => $r['reponse_id'],
-                'contenu_reponse' => $reponse->contenu_reponse,
-                'reponse_correcte' => $reponse->reponse_correcte,
-            ]);
-    
-            // Ajouter les points si correct
-            if ($reponse->reponse_correcte === 'Vrai') {
-                $question = $reponse->question;
-                $noteFinale += $question->points_question;
-            }
-        }
-    
-        // Enregistrer la note finale
-        $testId = \App\Models\Question::find($validated['reponses'][0]['question_id'])->test_id;
-    
-        Note::updateOrCreate(
-            ['candidat_id' => $candidat_id, 'test_id' => $testId],
-            ['note_candidat' => $noteFinale]
-        );
-    
-        // Mettre à jour l’état de la candidature
-        $candidature = Candidature::where('candidat_id', $candidat_id)
-            ->where('offre_id', $validated['offre_id'])
-            ->first();
-    
-        if ($candidature && $candidature->etat_candidature === 'en_attente') {
-            $candidature->update(['etat_candidature' => 'en_cours']);
-        }
-    
-        return response()->json([
-            'message' => 'Test soumis avec succès',
-            'note_candidat' => $noteFinale,
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'candidat_id' => 'required|exists:users,id',
+        'offre_id' => 'required|exists:offres,id',
+        'reponses' => 'required|array',
+        'reponses.*.question_id' => 'required|exists:questions,id',
+        'reponses.*.reponse_id' => 'required|exists:reponses,id',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
     }
+
+    $validated = $validator->validated();
+    $candidat_id = $validated['candidat_id'];
+    $noteFinale = 0;
+
+    foreach ($validated['reponses'] as $r) {
+        $reponse = \App\Models\Reponse::find($r['reponse_id']);
+
+        if (!$reponse) {
+            return response()->json([
+                'message' => "Réponse {$r['reponse_id']} introuvable."
+            ], 404);
+        }
+
+        // Vérifier si le candidat a déjà répondu à cette question
+        $existing = ReponseCandidat::where('candidat_id', $candidat_id)
+            ->where('question_id', $r['question_id'])
+            ->first();
+
+        if ($existing) {
+            continue; // ignorer ou remplacer selon la logique souhaitée
+        }
+
+        // Stocke la réponse du candidat avec la date de soumission
+        ReponseCandidat::create([
+            'candidat_id' => $candidat_id,
+            'question_id' => $r['question_id'],
+            'reponse_id' => $r['reponse_id'],
+            'contenu_reponse' => $reponse->contenu_reponse,
+            'reponse_correcte' => $reponse->reponse_correcte,
+            'date_soumission' => now(),
+        ]);
+
+        // Ajouter les points si correct
+        if ($reponse->reponse_correcte === 'Vrai') {
+            $question = $reponse->question;
+            $noteFinale += $question->points_question;
+        }
+    }
+
+    // Enregistrer la note finale
+    $firstQuestionId = $validated['reponses'][0]['question_id'];
+    $testId = \App\Models\Question::find($firstQuestionId)->test_id;
+
+    Note::updateOrCreate(
+        ['candidat_id' => $candidat_id, 'test_id' => $testId],
+        ['note_candidat' => $noteFinale]
+    );
+
+    // Mettre à jour l’état de la candidature
+    $candidature = Candidature::where('candidat_id', $candidat_id)
+        ->where('offre_id', $validated['offre_id'])
+        ->first();
+
+    if ($candidature && $candidature->etat_candidature === 'en_attente') {
+        $candidature->update(['etat_candidature' => 'en_cours']);
+    }
+
+    return response()->json([
+        'message' => 'Test soumis avec succès',
+        'note_candidat' => $noteFinale,
+    ]);
+}
+
+    /**
+ * Récupérer toutes les réponses soumises par tous les candidats
+ */
+public function getAllReponsesCandidats()
+{
+    try {
+        $reponses = ReponseCandidat::with(['question', 'reponse', 'candidat'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        if ($reponses->isEmpty()) {
+            return response()->json(['message' => 'Aucune réponse soumise trouvée.'], 404);
+        }
+
+        return response()->json($reponses);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+
+
 }
