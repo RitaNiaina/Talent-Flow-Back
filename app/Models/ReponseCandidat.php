@@ -20,15 +20,20 @@ class ReponseCandidat extends Model
         'date_soumission',
     ];
     
-    public function question() {
-        return $this->belongsTo(Question::class);
+    public function question()
+    {
+        return $this->belongsTo(Question::class, 'question_id');
     }
 
-    public function candidat() {
+    /**
+     * Relation vers User (candidat)
+     */
+    public function candidat()
+    {
         return $this->belongsTo(User::class, 'candidat_id');
     }
 
     public function reponse() {
-        return $this->belongsTo(Reponse::class);
+        return $this->belongsTo(Reponse::class, 'reponse_id');
     }
 }
