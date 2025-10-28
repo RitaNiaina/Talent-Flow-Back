@@ -7,6 +7,7 @@ use App\Models\ReponseCandidat;
 use App\Models\Question;
 use App\Models\User;
 use App\Models\Note;
+use App\Models\Offre;
 use App\Models\Candidature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -240,19 +241,38 @@ class ReponseController extends Controller
 public function getAllReponsesCandidats()
 {
     try {
-        $reponses = ReponseCandidat::with(['question', 'reponse', 'candidat'])
+        // Charger toutes les relations imbriquées
+        $reponses = \App\Models\ReponseCandidat::with([
+            'question.test.offre', // 🔗 permet d'accéder à l'offre
+            'reponse',
+            'candidat'
+        ])
             ->orderBy('created_at', 'desc')
             ->get();
 
         if ($reponses->isEmpty()) {
-            return response()->json(['message' => 'Aucune réponse soumise trouvée.'], 404);
+            return response()->json(['message' => 'Aucune réponse trouvée.'], 404);
         }
 
-        return response()->json($reponses);
+        // 🔹 Regrouper par candidat + offre
+        $grouped = $reponses->groupBy(function ($item) {
+            $offreId = optional($item->question->test->offre)->id ?? 'inconnu';
+            return $item->candidat_id . '_' . $offreId;
+        })->map(function ($items) {
+            $first = $items->first();
+            return [
+                'candidat' => $first->candidat,
+                'offre' => $first->question->test->offre,
+                'reponses' => $items->values(),
+            ];
+        })->values();
+
+        return response()->json($grouped);
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
     }
 }
+
 
 
 }
