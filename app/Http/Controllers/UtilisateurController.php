@@ -184,33 +184,53 @@ class UtilisateurController extends Controller
             'email_utilisateur' => 'required|email',
             'mot_passe' => 'required|string|min:6',
         ]);
-
+    
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
                 'errors' => $validator->errors(),
             ], 422);
         }
-
-        $user = User::where('email_utilisateur', $request->email_utilisateur)->first();
-
+    
+        $user = User::with('role')->where('email_utilisateur', $request->email_utilisateur)->first();
+    
         if (!$user || !Hash::check($request->mot_passe, $user->mot_passe)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Identifiants invalides',
             ], 401);
         }
-
+    
+        // Vérifier le rôle
+        $role = $user->role->type_role ?? null;
+    
+        if (!in_array($role, ['Administrateur', 'Recruteur'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Vous devez être Administrateur ou Recruteur',
+            ], 403); // 403 Forbidden
+        }
+    
+        // Générer le token
         $token = $user->createToken('auth_token')->plainTextToken;
-
+    
+        // Redirection dynamique selon le rôle
+        $redirectUrl = $role === 'Administrateur' ? '/dashboard' : '/recruteur/dashboard';
+    
         return response()->json([
             'status' => true,
             'message' => 'Connexion réussie',
-            'user' => $user,
+            'user' => [
+                'id' => $user->id,
+                'nom_utilisateur' => $user->nom_utilisateur,
+                'email_utilisateur' => $user->email_utilisateur,
+                'role' => $role,
+            ],
+            'redirect' => $redirectUrl,
             'token' => $token,
         ], 200);
     }
-
+    
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
