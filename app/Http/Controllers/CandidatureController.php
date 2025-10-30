@@ -55,44 +55,55 @@ class CandidatureController extends Controller
      * Créer une nouvelle candidature avec upload CV/lettre.
      */
     public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'cv_candidat' => 'required|file|mimes:pdf,doc,docx|max:5120',
-            'lettre_motivation' => 'required|file|mimes:pdf,doc,docx|max:5120',
-            'etat_candidature' => 'sometimes|in:en_attente,en_cours,acceptee,refusee',
-            'candidat_id' => 'required|exists:users,id',
-            'offre_id' => 'required|exists:offres,id',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'cv_candidat' => 'required|file|mimes:pdf,doc,docx|max:5120',
+        'lettre_motivation' => 'required|file|mimes:pdf,doc,docx|max:5120',
+        'etat_candidature' => 'sometimes|in:en_attente,en_cours,acceptee,refusee',
+        'candidat_id' => 'required|exists:users,id',
+        'offre_id' => 'required|exists:offres,id',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $validated = $validator->validated();
-        $validated['date_postule'] = Carbon::now()->toDateString();
-        $validated['etat_candidature'] = $validated['etat_candidature'] ?? 'en_attente';
-
-        // Upload des fichiers
-        if ($request->hasFile('cv_candidat')) {
-            $validated['cv_candidat'] = $request->file('cv_candidat')->store('cvs', 'public');
-        }
-
-        if ($request->hasFile('lettre_motivation')) {
-            $validated['lettre_motivation'] = $request->file('lettre_motivation')->store('lettres', 'public');
-        }
-
-        $candidature = Candidature::create($validated);
-        $candidature->load(['candidat', 'offre']);
-
-        // Générer les URLs publiques
-        $candidature->cv_candidat = $candidature->cv_candidat ? asset('storage/' . $candidature->cv_candidat) : null;
-        $candidature->lettre_motivation = $candidature->lettre_motivation ? asset('storage/' . $candidature->lettre_motivation) : null;
-
-        return response()->json([
-            'message' => 'Candidature créée avec succès',
-            'candidature' => $candidature
-        ], 201);
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
     }
+
+    $validated = $validator->validated();
+    $validated['date_postule'] = Carbon::now()->toDateString();
+    $validated['etat_candidature'] = $validated['etat_candidature'] ?? 'en_attente';
+
+    // ✅ Vérifier si une candidature existe déjà
+    $existing = Candidature::where('candidat_id', $validated['candidat_id'])
+        ->where('offre_id', $validated['offre_id'])
+        ->first();
+
+    if ($existing) {
+        return response()->json([
+            'message' => 'Vous avez déjà postulé à cette offre.'
+        ], 409); // 409 = Conflict
+    }
+
+    // ✅ Upload des fichiers
+    if ($request->hasFile('cv_candidat')) {
+        $validated['cv_candidat'] = $request->file('cv_candidat')->store('cvs', 'public');
+    }
+
+    if ($request->hasFile('lettre_motivation')) {
+        $validated['lettre_motivation'] = $request->file('lettre_motivation')->store('lettres', 'public');
+    }
+
+    $candidature = Candidature::create($validated);
+    $candidature->load(['candidat', 'offre']);
+
+    // Générer les URLs publiques
+    $candidature->cv_candidat = $candidature->cv_candidat ? asset('storage/' . $candidature->cv_candidat) : null;
+    $candidature->lettre_motivation = $candidature->lettre_motivation ? asset('storage/' . $candidature->lettre_motivation) : null;
+
+    return response()->json([
+        'message' => 'Candidature créée avec succès',
+        'candidature' => $candidature
+    ], 201);
+}
 
     /**
      * Afficher une candidature spécifique.

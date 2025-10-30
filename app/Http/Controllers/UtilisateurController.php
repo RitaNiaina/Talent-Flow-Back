@@ -239,4 +239,53 @@ class UtilisateurController extends Controller
             'message' => 'Déconnexion réussie'
         ]);
     }
+
+
+    public function loginCandidat(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'email_utilisateur' => 'required|email',
+        'mot_passe' => 'required|string|min:6',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => false,
+            'errors' => $validator->errors(),
+        ], 422);
+    }
+
+    $user = User::with('role')->where('email_utilisateur', $request->email_utilisateur)->first();
+
+    if (!$user || !Hash::check($request->mot_passe, $user->mot_passe)) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Identifiants invalides',
+        ], 401);
+    }
+
+    // Vérifie bien que le rôle est "Candidat"
+    if ($user->role->type_role !== 'Candidat') {
+        return response()->json([
+            'status' => false,
+            'message' => 'Vous devez être un candidat pour accéder à cet espace.',
+        ], 403);
+    }
+
+    // Création du token d'authentification
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Connexion réussie.',
+        'user' => [
+            'id' => $user->id,
+            'nom_utilisateur' => $user->nom_utilisateur,
+            'email_utilisateur' => $user->email_utilisateur,
+            'role' => $user->role->type_role,
+        ],
+        'token' => $token,
+    ], 200);
+}
+
 }

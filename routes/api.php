@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('logins', [UtilisateurController::class, 'login'])->name('login');
 Route::post('register', [UtilisateurController::class, 'register']);
-
+Route::post('login-candidat', [UtilisateurController::class, 'loginCandidat']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
