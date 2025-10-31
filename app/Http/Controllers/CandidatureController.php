@@ -17,23 +17,23 @@ class CandidatureController extends Controller
     public function index(Request $request)
     {
         $query = Candidature::with([
-            'candidat:id,nom_utilisateur',
+            'candidat:id,nom_utilisateur,email_utilisateur', // ⚡ ajouter email ici
             'offre:id,titre_offre'
         ]);
-
+    
         if ($request->has('candidat_id')) {
             $query->where('candidat_id', $request->candidat_id);
         }
-
+    
         $candidatures = $query->get();
-
+    
         $result = $candidatures->map(function ($c) {
             $note = Note::where('candidat_id', $c->candidat_id)
                 ->whereHas('test', function ($q) use ($c) {
                     $q->where('offre_id', $c->offre_id);
                 })
                 ->value('note_candidat');
-
+    
             return [
                 'id' => $c->id,
                 'cv_candidat' => $c->cv_candidat ? asset('storage/' . $c->cv_candidat) : null,
@@ -42,15 +42,16 @@ class CandidatureController extends Controller
                 'etat_candidature' => $c->etat_candidature,
                 'candidat_id' => $c->candidat_id,
                 'candidat_nom' => $c->candidat->nom_utilisateur ?? null,
+                'candidat_email' => $c->candidat->email_utilisateur ?? null, // ⚡ ajouter email ici
                 'offre_id' => $c->offre_id,
                 'offre_titre' => $c->offre->titre_offre ?? null,
                 'note_candidat' => $note ?? null,
             ];
         });
-
+    
         return response()->json($result);
     }
-
+    
     /**
      * Créer une nouvelle candidature avec upload CV/lettre.
      */

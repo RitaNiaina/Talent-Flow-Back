@@ -8,6 +8,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\StatsController;
+use App\Http\Controllers\EntretienController;
 use App\Http\Controllers\CompetenceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -49,3 +50,4 @@ Route::put('/candidatures/{id}/refuser', [CandidatureController::class, 'refuser
 Route::get('/offres/{offreId}/has-applied/{candidatId}', [OffreController::class, 'hasApplied']);
 Route::get('/reponses-candidat/{candidat_id}', [ReponseController::class, 'getReponsesCandidat']);
 Route::get('/reponses-candidats', [ReponseController::class, 'getAllReponsesCandidats']);
+Route::apiResource('entretiens', EntretienController::class);
