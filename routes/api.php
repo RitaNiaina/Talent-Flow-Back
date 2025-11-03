@@ -17,7 +17,6 @@ Route::post('logins', [UtilisateurController::class, 'login'])->name('login');
 Route::post('register', [UtilisateurController::class, 'register']);
 Route::post('login-candidat', [UtilisateurController::class, 'loginCandidat']);
 
-Route::post('testMe', [EntretienController::class, 'testEmail']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();

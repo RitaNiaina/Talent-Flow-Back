@@ -17,7 +17,7 @@ class CandidatureController extends Controller
     public function index(Request $request)
     {
         $query = Candidature::with([
-            'candidat:id,nom_utilisateur,email_utilisateur', // ⚡ ajouter email ici
+            'candidat:id,nom_utilisateur,email_utilisateur', 
             'offre:id,titre_offre'
         ]);
     
