@@ -1,31 +1,27 @@
 <?php
 
 use App\Http\Controllers\CandidatureController;
+use App\Http\Controllers\CompetenceController;
+use App\Http\Controllers\EntretienController;
 use App\Http\Controllers\OffreController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\ReponseController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\StatsController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\UtilisateurController;
-use App\Http\Controllers\StatsController;
-use App\Http\Controllers\EntretienController;
-use App\Http\Controllers\CompetenceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
 
 Route::post('logins', [UtilisateurController::class, 'login'])->name('login');
 Route::post('register', [UtilisateurController::class, 'register']);
 Route::post('login-candidat', [UtilisateurController::class, 'loginCandidat']);
 
+Route::post('testMe', [EntretienController::class, 'testEmail']);
 Route::middleware('auth:sanctum')->group(function () {
-
     Route::get('/user', function (Request $request) {
-    
         return $request->user();
     });
-    
-    
 });
 Route::apiResource('offre', OffreController::class);
 Route::apiResource('roles', RoleController::class);
