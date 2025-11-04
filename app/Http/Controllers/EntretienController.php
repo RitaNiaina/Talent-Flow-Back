@@ -18,8 +18,13 @@ class EntretienController extends Controller
      */
     public function index()
     {
-        return Entretien::with(['candidature.candidat', 'manager'])->get();
+        return Entretien::with([
+            'candidature.candidat',
+            'candidature.offre', 
+            'manager'
+        ])->get();
     }
+    
 
 
 
@@ -214,9 +219,15 @@ try {
      */
     public function show($id)
     {
-        $entretien = Entretien::with(['candidature.candidat', 'manager'])->findOrFail($id);
+        $entretien = Entretien::with([
+            'candidature.candidat',
+            'candidature.offre', 
+            'manager'
+        ])->findOrFail($id);
+    
         return response()->json($entretien);
     }
+    
 
     /**
      * Modifier un entretien existant
@@ -224,31 +235,113 @@ try {
     public function update(Request $request, $id)
     {
         $entretien = Entretien::findOrFail($id);
-
+    
         $validated = $request->validate([
             'type_entretien' => 'in:présentiel,en ligne',
             'lieu' => 'nullable|string|required_if:type_entretien,présentiel',
             'lien_meet' => 'nullable|url|required_if:type_entretien,en ligne',
             'date_entretien' => 'nullable|date|after:now',
             'commentaire' => 'nullable|string|max:500',
+            'manager_id' => 'required|exists:users,id',
         ]);
-
+    
         $entretien->update($validated);
-
+    
+        $manager = $entretien->manager; // récupère le manager actuel
+        $candidat = $entretien->candidature->candidat;
+    
+        // Envoyer un mail au candidat et au nouveau manager
+        try {
+            $htmlMessage = "
+                <html>
+                <head><meta charset='utf-8'></head>
+                <body>
+                    <p>Bonjour <strong>{$candidat->nom_utilisateur}</strong>,</p>
+                    <p>Votre entretien a été reporté au <strong>{$entretien->date_entretien}</strong>.</p>
+                    <p>Cordialement,<br>L’équipe RH</p>
+                </body>
+                </html>
+            ";
+            Mail::html($htmlMessage, function ($message) use ($candidat) {
+                $message->to($candidat->email_utilisateur)
+                    ->subject('📅 Reportation de votre entretien');
+            });
+    
+            // Mail au manager
+            if ($manager && $manager->email_utilisateur) {
+                Mail::html($htmlMessage, function ($message) use ($manager) {
+                    $message->to($manager->email_utilisateur)
+                        ->subject('📅 Entretien assigné/modifié');
+                });
+            }
+    
+        } catch (\Exception $e) {
+            \Log::error("Erreur envoi mail: {$e->getMessage()}");
+        }
+    
         return response()->json([
             'message' => 'Entretien mis à jour avec succès !',
             'entretien' => $entretien
         ]);
     }
+    
+
 
     /**
      * Supprimer un entretien
      */
     public function destroy($id)
-    {
-        $entretien = Entretien::findOrFail($id);
-        $entretien->delete();
+{
+    $entretien = Entretien::with('candidature.candidat')->findOrFail($id);
+    $candidat = $entretien->candidature->candidat;
 
-        return response()->json(['message' => 'Entretien supprimé avec succès.']);
+    try {
+        // Envoi de l'email d'annulation
+        if ($candidat && $candidat->email_utilisateur) {
+            $htmlMessage = '
+            <html>
+            <head><meta charset="utf-8"></head>
+            <body>
+                <p>Bonjour <strong>' . e($candidat->nom_utilisateur) . '</strong>,</p>
+                <p>Nous vous informons que votre entretien prévu le <strong>' . e($entretien->date_entretien) . '</strong> a été annulé.</p>
+                <p>Si vous avez des questions, n’hésitez pas à nous contacter.</p>
+                <p>Cordialement,<br>L’équipe RH</p>
+            </body>
+            </html>
+            ';
+
+            Mail::html($htmlMessage, function ($message) use ($candidat) {
+                $message->to($candidat->email_utilisateur)
+                        ->subject('❌ Annulation de votre entretien');
+            });
+        }
+    } catch (Exception $e) {
+        \Log::error("Erreur envoi email annulation entretien: {$e->getMessage()}");
+    }
+
+    // Suppression de l'entretien
+    $entretien->delete();
+
+    return response()->json(['message' => 'Entretien annulé avec succès et candidat notifié.']);
+}
+    /**
+ * Récupère la liste des recruteurs (utilisateurs ayant le rôle 'Recruteur')
+ */
+public function getRecruteurs()
+{
+    try {
+        $recruteurs = \App\Models\User::whereHas('role', function ($query) {
+            $query->where('type_role', 'Recruteur'); 
+        })
+        ->select('id', 'nom_utilisateur', 'email_utilisateur')
+        ->get();
+
+        return response()->json($recruteurs, 200);
+    } catch (\Exception $e) {
+        \Log::error("Erreur lors de la récupération des recruteurs : " . $e->getMessage());
+        return response()->json(['error' => 'Erreur lors du chargement des recruteurs'], 500);
     }
 }
+
+}
+

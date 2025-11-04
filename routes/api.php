@@ -46,3 +46,4 @@ Route::get('/offres/{offreId}/has-applied/{candidatId}', [OffreController::class
 Route::get('/reponses-candidat/{candidat_id}', [ReponseController::class, 'getReponsesCandidat']);
 Route::get('/reponses-candidats', [ReponseController::class, 'getAllReponsesCandidats']);
 Route::apiResource('entretiens', EntretienController::class);
+Route::get('/recruteurs', [EntretienController::class, 'getRecruteurs']);
