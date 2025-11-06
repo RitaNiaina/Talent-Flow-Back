@@ -16,94 +16,101 @@ class EntretienController extends Controller
      * Liste tous les entretiens
      */
     public function index()
-    {
-        return Entretien::with(['candidature.candidat', 'candidature.offre', 'manager'])->get();
-    }
+{
+    return Entretien::with(['candidature.candidat', 'candidature.offre', 'manager'])->get();
+}
+
 
     /**
      * Crée un nouvel entretien + envoi email
      */
     public function store(Request $request)
-{
-    $validated = $request->validate([
-        'candidature_id' => 'required|exists:candidatures,id',
-        'manager_id' => 'required|exists:users,id',
-        'type_entretien' => 'required|in:présentiel,en ligne',
-        'lieu' => 'nullable|string|required_if:type_entretien,présentiel',
-        'lien_meet' => 'nullable|url|required_if:type_entretien,en ligne',
-        'date_entretien' => 'required|date|after:now',
-        'commentaire' => 'nullable|string|max:500',
-    ]);
+    {
+        $validated = $request->validate([
+            'candidature_id' => 'required|exists:candidatures,id',
+            'manager_id' => 'required|exists:users,id',
+            'type_entretien' => 'required|in:présentiel,en ligne',
+            'lieu' => 'nullable|string|required_if:type_entretien,présentiel',
+            'lien_meet' => 'nullable|url|required_if:type_entretien,en ligne',
+            'date_entretien' => 'required|date|after:now',
+            'commentaire' => 'nullable|string|max:500',
+        ]);
 
-    $candidature = Candidature::with('candidat', 'offre')->findOrFail($validated['candidature_id']);
-
-    if ($candidature->etat_candidature !== 'acceptee') {
-        $candidature->etat_candidature = 'acceptee';
-        $candidature->save();
-    }
-
-    $entretien = Entretien::create($validated);
-
-    try {
-        if ($candidature->candidat && $candidature->candidat->email_utilisateur) {
-            $dateEntretien = Carbon::parse($validated['date_entretien'])
-                ->locale('fr')
-                ->translatedFormat('l j F Y à H:i');
-            $titreOffre = $candidature->offre ? $candidature->offre->titre_offre : 'Offre non spécifiée';
-            $logoUrl = asset('images/unit-logo.png');
-
-            $htmlMessage = '
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <style>
-                    body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333; line-height: 1.6; margin:0; padding:20px; background-color:#f5f6fa; }
-                    .container { max-width:600px; margin:auto; background:#fff; border:1px solid #e1e4e8; border-radius:10px; padding:25px; box-shadow:0 2px 8px rgba(0,0,0,0.05);}
-                    .header { border-bottom:3px solid #2563eb; padding-bottom:10px; text-align:center; font-size:18px; font-weight:bold; color:#2563eb; }
-                    .logo { text-align:center; margin-bottom:10px; }
-                    .logo img { width:100px; }
-                    .section { margin:20px 0; border-left:4px solid #2563eb; background:#f9fbff; padding:12px 18px; border-radius:6px; }
-                    .label { font-weight:bold; color:#333; }
-                    .value { font-weight:normal; color:#000; }
-                    .btn { display:inline-block; background:#2563eb; color:#fff !important; text-decoration:none; padding:10px 20px; border-radius:6px; font-weight:bold; margin-top:15px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="logo"><img src="'.$logoUrl.'" alt="Logo Entreprise"></div>
-                    <div class="header">📅 Invitation à un entretien</div>
-                    <p>Bonjour <strong>'.e($candidature->candidat->nom_utilisateur).'</strong>,</p>
-                    <p>Vous avez postulé sur l\'offre : <strong>'.e($titreOffre).'</strong>.</p>
-                    <div class="section">
-                        <p>🗓 <span class="label">Date :</span> <span class="value">'.e($dateEntretien).'</span></p>
-                        <p>🧩 <span class="label">Type :</span> <span class="value">'.e($validated['type_entretien']).'</span></p>';
-
-            if ($validated['type_entretien'] === 'présentiel') {
-                $htmlMessage .= '<p>📍 <span class="label">Lieu :</span> '.e($validated['lieu']).'</p>';
-            } else {
-                $htmlMessage .= '<p>💻 <span class="label">Lien :</span> <a href="'.e($validated['lien_meet']).'">'.e($validated['lien_meet']).'</a></p>
-                <p style="text-align:center"><a href="'.e($validated['lien_meet']).'" class="btn">🎥 Rejoindre l’entretien</a></p>';
-            }
-
-            $htmlMessage .= '
-                    </div>
-                    <p>Merci de bien vouloir être prêt(e) à l’heure indiquée.</p>
-                    <p>Cordialement,<br>L’équipe RH</p>
-                </div>
-            </body>
-            </html>';
-
-            Mail::html($htmlMessage, function ($message) use ($candidature) {
-                $message->to($candidature->candidat->email_utilisateur)
-                    ->subject('📢 Invitation à un entretien');
-            });
+        // Vérifier si un entretien existe déjà pour cette candidature
+        $existing = Entretien::where('candidature_id', $validated['candidature_id'])->first();
+        if ($existing) {
+            return response()->json([
+                'message' => 'Un entretien est déjà planifié pour ce candidat.'
+            ], 422);
         }
-    } catch (Exception $e) {
-        Log::error("Erreur envoi mail entretien : {$e->getMessage()}");
+
+        $candidature = Candidature::with('candidat', 'offre')->findOrFail($validated['candidature_id']);
+
+        // On ne met plus à jour l'état ici
+        $entretien = Entretien::create($validated);
+
+        // Envoi de mail au candidat
+        try {
+            if ($candidature->candidat && $candidature->candidat->email_utilisateur) {
+                $dateEntretien = Carbon::parse($validated['date_entretien'])
+                    ->locale('fr')
+                    ->translatedFormat('l j F Y à H:i');
+                $titreOffre = $candidature->offre ? $candidature->offre->titre_offre : 'Offre non spécifiée';
+                $logoUrl = asset('images/unit-logo.png');
+
+                $htmlMessage = '
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333; line-height: 1.6; margin:0; padding:20px; background-color:#f5f6fa; }
+                        .container { max-width:600px; margin:auto; background:#fff; border:1px solid #e1e4e8; border-radius:10px; padding:25px; box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+                        .header { border-bottom:3px solid #2563eb; padding-bottom:10px; text-align:center; font-size:18px; font-weight:bold; color:#2563eb; }
+                        .logo { text-align:center; margin-bottom:10px; }
+                        .logo img { width:100px; }
+                        .section { margin:20px 0; border-left:4px solid #2563eb; background:#f9fbff; padding:12px 18px; border-radius:6px; }
+                        .label { font-weight:bold; color:#333; }
+                        .value { font-weight:normal; color:#000; }
+                        .btn { display:inline-block; background:#2563eb; color:#fff !important; text-decoration:none; padding:10px 20px; border-radius:6px; font-weight:bold; margin-top:15px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="logo"><img src="'.$logoUrl.'" alt="Logo Entreprise"></div>
+                        <div class="header">📅 Invitation à un entretien</div>
+                        <p>Bonjour <strong>'.e($candidature->candidat->nom_utilisateur).'</strong>,</p>
+                        <p>Vous avez postulé sur l\'offre : <strong>'.e($titreOffre).'</strong>.</p>
+                        <div class="section">
+                            <p>🗓 <span class="label">Date :</span> <span class="value">'.e($dateEntretien).'</span></p>
+                            <p>🧩 <span class="label">Type :</span> <span class="value">'.e($validated['type_entretien']).'</span></p>';
+
+                if ($validated['type_entretien'] === 'présentiel') {
+                    $htmlMessage .= '<p>📍 <span class="label">Lieu :</span> '.e($validated['lieu']).'</p>';
+                } else {
+                    $htmlMessage .= '<p>💻 <span class="label">Lien :</span> <a href="'.e($validated['lien_meet']).'">'.e($validated['lien_meet']).'</a></p>
+                    <p style="text-align:center"><a href="'.e($validated['lien_meet']).'" class="btn">🎥 Rejoindre l’entretien</a></p>';
+                }
+
+                $htmlMessage .= '
+                        </div>
+                        <p>Merci de bien vouloir être prêt(e) à l’heure indiquée.</p>
+                        <p>Cordialement,<br>L’équipe RH</p>
+                    </div>
+                </body>
+                </html>';
+
+                Mail::html($htmlMessage, function ($message) use ($candidature) {
+                    $message->to($candidature->candidat->email_utilisateur)
+                        ->subject('📢 Invitation à un entretien');
+                });
+            }
+        } catch (\Exception $e) {
+            Log::error("Erreur envoi mail entretien : {$e->getMessage()}");
+        }
+
+        return response()->json(['message' => 'Entretien planifié avec succès !', 'entretien' => $entretien], 201);
     }
 
-    return response()->json(['message' => 'Entretien planifié et candidature acceptée avec succès !', 'entretien' => $entretien], 201);
-}
 
 /**
  * Mise à jour / report
@@ -283,5 +290,61 @@ public function destroy($id)
             Log::error("Erreur getRecruteurs : {$e->getMessage()}");
             return response()->json(['error' => 'Erreur lors du chargement des recruteurs'], 500);
         }
+    }
+
+    public function accepterCandidat($id)
+    {
+        $entretien = Entretien::with('candidature.candidat', 'candidature.offre')->findOrFail($id);
+        $candidature = $entretien->candidature;
+
+        if ($candidature->etat_candidature === 'acceptee') {
+            return response()->json(['message' => 'La candidature est déjà acceptée.'], 200);
+        }
+
+        // Mettre à jour l’état
+        $candidature->etat_candidature = 'acceptee';
+        $candidature->save();
+
+        try {
+            $logoUrl = asset('images/unit-logo.png');
+            $htmlMessage = '
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333; background:#f4f7fb; margin:0; padding:20px; }
+                    .container { background:#fff; border-radius:10px; padding:25px; max-width:600px; margin:auto; box-shadow:0 3px 10px rgba(0,0,0,0.1); }
+                    .header { text-align:center; font-weight:bold; font-size:20px; color:#2563eb; margin-bottom:10px; }
+                    .logo { text-align:center; margin-bottom:15px; }
+                    .logo img { width:100px; }
+                    .content { margin-top:10px; line-height:1.6; }
+                    .btn { display:inline-block; background:#2563eb; color:#fff; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold; margin-top:15px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="logo"><img src="'.$logoUrl.'" alt="Logo"></div>
+                    <div class="header">🎉 Félicitations !</div>
+                    <div class="content">
+                        <p>Bonjour <strong>'.e($candidature->candidat->nom_utilisateur).'</strong>,</p>
+                        <p>Nous avons le plaisir de vous informer que votre candidature pour le poste de <strong>'.e($candidature->offre->titre_offre ?? 'Offre non spécifiée').'</strong> a été <strong>acceptée</strong> suite à votre entretien.</p>
+                        <p>Notre équipe RH vous contactera très prochainement pour les prochaines étapes.</p>
+                        <p>Bienvenue à bord 🎊</p>
+                        <p>Cordialement,<br><strong>L’équipe RH</strong></p>
+                    </div>
+                </div>
+            </body>
+            </html>';
+
+            Mail::html($htmlMessage, function ($message) use ($candidature) {
+                $message->to($candidature->candidat->email_utilisateur)
+                    ->subject('🎉 Félicitations ! Votre candidature est acceptée');
+            });
+
+        } catch (Exception $e) {
+            Log::error("Erreur envoi mail acceptation : {$e->getMessage()}");
+        }
+
+        return response()->json(['message' => 'Candidature acceptée et email envoyé au candidat !']);
     }
 }

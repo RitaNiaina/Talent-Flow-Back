@@ -47,3 +47,4 @@ Route::get('/reponses-candidat/{candidat_id}', [ReponseController::class, 'getRe
 Route::get('/reponses-candidats', [ReponseController::class, 'getAllReponsesCandidats']);
 Route::apiResource('entretiens', EntretienController::class);
 Route::get('/recruteurs', [EntretienController::class, 'getRecruteurs']);
+Route::put('/entretiens/{id}/accepter', [EntretienController::class, 'accepterCandidat']);
