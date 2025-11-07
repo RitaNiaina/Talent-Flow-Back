@@ -69,7 +69,7 @@ class EntretienController extends Controller
                             .container { max-width:600px; margin:auto; background:#fff; border:1px solid #e1e4e8; border-radius:10px; padding:25px; box-shadow:0 2px 8px rgba(0,0,0,0.05);}
                             .header { border-bottom:3px solid #2563eb; padding-bottom:10px; text-align:center; font-size:18px; font-weight:bold; color:#2563eb; }
                             .logo { text-align:center; margin-bottom:10px; }
-                            .logo img { width:100px; }
+                            .logo img { width:30px; }
                             .section { margin:20px 0; border-left:4px solid #2563eb; background:#f9fbff; padding:12px 18px; border-radius:6px; }
                             .label { font-weight:bold; color:#333; }
                             .value { font-weight:normal; color:#000; }
@@ -161,7 +161,7 @@ class EntretienController extends Controller
                         .container { max-width:600px; margin:auto; background:#fff; border:1px solid #e1e4e8; border-radius:10px; padding:25px; box-shadow:0 2px 8px rgba(0,0,0,0.05);}
                         .header { border-bottom:3px solid #2563eb; padding-bottom:10px; text-align:center; font-size:18px; font-weight:bold; color:#2563eb; }
                         .logo { text-align:center; margin-bottom:10px; }
-                        .logo img { width:100px; }
+                        .logo img { width:30px; }
                         .section { margin:20px 0; border-left:4px solid #2563eb; background:#f9fbff; padding:12px 18px; border-radius:6px; }
                         .label { font-weight:bold; color:#333; }
                         .value { font-weight:normal; color:#000; }
@@ -213,7 +213,7 @@ class EntretienController extends Controller
                         .container { max-width:600px; margin:auto; background:#fff; border:1px solid #e1e4e8; border-radius:10px; padding:25px; box-shadow:0 2px 8px rgba(0,0,0,0.05);}
                         .header { border-bottom:3px solid #2563eb; padding-bottom:10px; text-align:center; font-size:18px; font-weight:bold; color:#2563eb; }
                         .logo { text-align:center; margin-bottom:10px; }
-                        .logo img { width:100px; }
+                        .logo img { width:30px; }
                         .section { margin:20px 0; border-left:4px solid #2563eb; background:#f9fbff; padding:12px 18px; border-radius:6px; }
                         .label { font-weight:bold; color:#333; }
                         .value { font-weight:normal; color:#000; }
@@ -286,7 +286,7 @@ class EntretienController extends Controller
                         .container { max-width:600px; margin:auto; background:#fff; border:1px solid #e1e4e8; border-radius:10px; padding:25px; box-shadow:0 2px 8px rgba(0,0,0,0.05);}
                         .header { border-bottom:3px solid #dc2626; padding-bottom:10px; text-align:center; font-size:18px; font-weight:bold; color:#dc2626; }
                         .logo { text-align:center; margin-bottom:10px; }
-                        .logo img { width:100px; }
+                        .logo img { width:30px; }
                         .section { margin:20px 0; border-left:4px solid #dc2626; background:#fff5f5; padding:12px 18px; border-radius:6px; }
                         .label { font-weight:bold; color:#333; }
                         .value { font-weight:normal; color:#000; }
@@ -373,7 +373,7 @@ class EntretienController extends Controller
                         .container { background:#fff; border-radius:10px; padding:25px; max-width:600px; margin:auto; box-shadow:0 3px 10px rgba(0,0,0,0.1); }
                         .header { text-align:center; font-weight:bold; font-size:20px; color:#2563eb; margin-bottom:10px; }
                         .logo { text-align:center; margin-bottom:15px; }
-                        .logo img { width:100px; }
+                        .logo img { width:30px; }
                         .content { margin-top:10px; line-height:1.6; }
                         .btn { display:inline-block; background:#2563eb; color:#fff; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold; margin-top:15px; }
                     </style>
@@ -381,12 +381,12 @@ class EntretienController extends Controller
                 <body>
                     <div class="container">
                         <div class="logo"><img src="' . $logoCid . '" alt="Logo"></div>
-                        <div class="header">🎉 Félicitations !</div>
+                        <div class="header"> Félicitations !</div>
                         <div class="content">
                             <p>Bonjour <strong>' . e($candidature->candidat->nom_utilisateur) . '</strong>,</p>
                             <p>Nous avons le plaisir de vous informer que votre candidature pour le poste de <strong>' . e($candidature->offre->titre_offre ?? 'Offre non spécifiée') . "</strong> a été <strong>acceptée</strong> suite à votre entretien.</p>
                             <p>Notre équipe RH vous contactera très prochainement pour les prochaines étapes.</p>
-                            <p>Bienvenue à bord 🎊</p>
+                            <p>Bienvenue à bord </p>
                             <p>Cordialement,<br><strong>L'équipe RH</strong></p>
                         </div>
                     </div>
@@ -396,7 +396,7 @@ class EntretienController extends Controller
                 $message->html($htmlMessage);
                 $message
                     ->to($candidature->candidat->email_utilisateur)
-                    ->subject('🎉 Félicitations ! Votre candidature est acceptée');
+                    ->subject(' Félicitations ! Votre candidature est acceptée');
             });
         } catch (Exception $e) {
             Log::error("Erreur envoi mail acceptation : {$e->getMessage()}");
