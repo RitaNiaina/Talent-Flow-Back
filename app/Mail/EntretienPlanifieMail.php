@@ -26,7 +26,17 @@ class EntretienPlanifieMail extends Mailable
      */
     public function build()
     {
-        return $this->subject('Votre entretien a été planifié')
-                    ->markdown('emails.entretien.planifie');
+        $logoPath = public_path('images/unit-logo.png');
+        $logoCid = null;
+
+        if (file_exists($logoPath)) {
+            $logoCid = $this->embed($logoPath);
+        }
+
+        return $this
+            ->subject('Votre entretien a été planifié')
+            ->markdown('emails.entretien.planifie', [
+                'logoCid' => $logoCid
+            ]);
     }
 }
